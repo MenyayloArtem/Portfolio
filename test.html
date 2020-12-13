@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <input type="text" name="login" id="login">
+    <input type="password" name="password" id="password">
+<button onclick="test()">Отправить</button>
+</body>
+<script>
+    async function test(){
+        let name = document.getElementById('login').value
+        let password = document.getElementById('password').value
+        let n = await fetch('/auth',{
+            method : 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body : JSON.stringify({
+                name,
+                password
+            })
+        })
+        let res = await n.text()
+        console.log(res)
+    }
+</script>
+</html>
