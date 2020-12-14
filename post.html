@@ -24,11 +24,16 @@
         <div id="post-content">
             <h1>{{ post.title }}</h1>
             <img id="post-img" :src="'uploads/'+post.imgPath" width="400">
-            <div id="post-text">{{ post.text }}</div>
+            <div id="post-text" v-html="post.text">{{ post.text }}</div>
         </div>
         </div>
     </section>
 </body>
+<style>
+    img {
+        max-width: 400px;
+    }
+</style>
 <script src="https://unpkg.com/vue@next"></script>
 <script>
     const App = {

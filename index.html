@@ -253,9 +253,9 @@
                 </div>
                 <div class="post-info">
                     <div class="post-info-wrapper">
-                    <div class="post-title">
+                    <a class="post-title" v-bind:href="'/post:'+post.id">
                         {{ post.title }}
-                    </div>
+                    </a>
                     <div class="sm-info-block">
                     <div class="sm-info">
                         <div class="sm-ico-block">
@@ -274,10 +274,11 @@
                         </div>
                     </div>
                     <div class="sm-info">
-                        <a class="sm-ico-block" v-bind:href="'/post:'+post.id">
-                            <img 
-                            v-if="permission == 'admin'"
-                            src="images/edit.png" width="16" height="16" class="sm-ico">
+                        <a class="sm-ico-block"
+                        v-bind:href="'/editPost:'+post.id"
+                        v-if="permission == 'admin' || post.authorID == id"
+                        >
+                    <img src="images/edit.png" width="16" height="16" class="sm-ico">
                         </a>
                     </div>
                     </div>

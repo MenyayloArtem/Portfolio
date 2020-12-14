@@ -33,13 +33,12 @@ const App = {
         } catch(err){
             console.log(err)
         }
-        let token = this.getCookie('token')
-        if(!token){
-        this.login()
-        }
+    
         let getPermission = await fetch('/permission')
-        let permission = await getPermission.text()
+        let {permission,id} = await getPermission.json()
+        console.log(permission,id)
         this.permission = permission
+        this.id = id
     }
 }
 

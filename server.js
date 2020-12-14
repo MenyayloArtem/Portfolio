@@ -7,9 +7,11 @@ const app = express()
 const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
 const secret = 'secret'
 
 let session = require('express-session');
+const { decode } = require('punycode');
 
 app.use(session({
     secret,
@@ -37,7 +39,7 @@ app.get('/',(req,res)=>{
     res.sendFile(path.join(__dirname,'index.html'))
 })
 
-app.get('/posts', async (req,res)=>{
+app.get('/posts',async (req,res)=>{
     pool.execute('SELECT * FROM posts').then(([rows,fields])=>{
         res.send(rows)
     }).catch(err => {
@@ -46,10 +48,17 @@ app.get('/posts', async (req,res)=>{
 })
 
 app.get('/permission',(req,res)=>{
-    let token = req.cookies['token'].split(' ')[1]
-    jwt.verify(token,secret,(err,{permission})=>{
-        res.send(permission)
+    if(req.cookies['token']){
+        let token = req.cookies['token'].split(' ')[1]
+        jwt.verify(token,secret,(err,{permission,id})=>{
+        res.json({permission,id})
     })
+    } else {
+        res.json({
+            permission : 'guest',
+            id : null
+        })
+    }
 })
 
 app.get('/post:id',(req,res)=>{
@@ -66,25 +75,42 @@ app.get('/getPost:id',async (req,res)=>{
     })
 })
 
-// ALTER TABLE posts
-// ADD CONSTRAINT users
-// FOREIGN KEY (authorID)
-// REFERENCES users(id)
-
-app.get('/editPost:id',(req,res)=>{
+app.get('/editPost:id',async (req,res)=>{
+    let token = req.cookies['token'].split(' ')[1]
     let id = req.params.id.split(':')[1]
-    res.sendFile(path.join(__dirname,'/editPost.html'))
+    let [authorID] = await pool.execute(`SELECT authorID FROM posts WHERE id = ${id}`)
+    authorID = authorID[0].authorID
+    jwt.verify(token,secret,(err,result)=>{
+    if(result.id == authorID || result.permission == 'admin'){
+            res.sendFile(path.join(__dirname,'/editPost.html'))
+        } else {
+            res.redirect(`/post:${id}`)
+        }
+    })
 })
 
-app.post('/editPost',(req,res,next)=>{
-    console.log(req.body)
-    pool.execute('UPDATE posts SET `title` = ?,`text` = ?,`status` = ? WHERE `text` = ?',
-    [req.body.title,req.body.text,req.body.status,req.body.text]
-    ).then(()=>{
+app.post('/editPost:id',async (req,res,next)=>{
+    let postId = +(req.params.id.split(':')[1])
+    let token = req.cookies['token'].split(' ')[1]
+    let decoded = await jwt.verify(token,secret)
+    let id = decoded.id
+    let permission = decoded.permission
+    pool.execute(`SELECT authorID FROM posts
+    WHERE id = ${postId}
+    `).then(([rows])=>{
+        let authorID = rows[0].authorID
+        if(authorID == id || permission == 'admin'){
+        return pool.execute('UPDATE posts SET `title` = ?,`text` = ?,`status` = ? WHERE `id` = ?',
+    [req.body.title,req.body.text,req.body.status,postId]
+    )
+    }
+    }).then(()=>{
         console.log('Пост отредактирован')
-    }).catch(err =>{
+        
+    }).catch(err => {
         throw err
     })
+    res.redirect(`/post:${postId}`)
     next()
 })
 
@@ -152,9 +178,7 @@ app.post('/auth', async (req,res)=>{
     pool.execute(`SELECT name FROM users WHERE name = '${req.body.name}'`)
     .then(([rows,fields])=>{
         if(rows.length){
-            return pool.execute(`SELECT * FROM users WHERE 
-            password = '${req.body.password}' AND
-            name = '${req.body.name}'`)
+            return pool.execute(`SELECT * FROM users WHERE name = '${req.body.name}'`)
         } else {
             res.json({
                 message : 'Имени не существует',
@@ -162,8 +186,9 @@ app.post('/auth', async (req,res)=>{
             })
         }
     })
-    .then(([rows])=>{
-        if(rows.length){
+    .then(async ([rows])=>{
+        let compare = await bcrypt.compare(req.body.password,rows[0].password)
+        if(compare){
             let token = jwt.sign({
             id : rows[0].id,
             name : rows[0].name,
@@ -173,7 +198,8 @@ app.post('/auth', async (req,res)=>{
                 res.json({
                     message : 'Успешная авторизация',
                     authSusecc : true,
-                    permission : rows[0].permission
+                    permission : rows[0].permission,
+                    id : rows[0].id
                 })
         } else {
             res.json({

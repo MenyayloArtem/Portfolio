@@ -21,23 +21,27 @@
         </div>
     </nav>
     <h2>Редактировать пост</h2>
-    <form action="/editPost" method="POST" enctype="multipart/form-data">
+    <form>
         <div id="row">
             <input type="text"
             class="half" 
             name="title" 
+            id="title"
             placeholder="Заголовок"
             :value="post.title"
             >
             <input type="text"
             class="half" 
             name="status" 
+            id="status"
             placeholder="Статус"
             :value="post.status"
             >
         </div>
-        <textarea name="text" :value="post.text"></textarea>
-        <input type="submit">
+        <textarea name="text"
+        id="text"
+        :value="post.text"></textarea>
+        <button @click='send'>Сохранить</button>
     </form>
     </div>
     
@@ -55,12 +59,31 @@
                 }
             }
         },
+        methods : {
+            async send(){
+            let title = document.getElementById('title').value
+            let status = document.getElementById('status').value
+            let text = document.getElementById('text').value
+            let postId = window.location.pathname.split(':')[1]
+            let post = await fetch(`/editPost:${postId}`,{
+                method : 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+            },
+            body : JSON.stringify({
+                title,
+                status,
+                text
+            })
+            })
+            document.location.href=`/post:${postId}`
+            }
+        },
         async mounted(){
             let postId = window.location.pathname.split(':')[1]
             let post = await fetch(`/getPost:${postId}`)
             let res = await post.json()
             this.post = res
-            console.log(res)
         }
     }
 
@@ -88,6 +111,15 @@
     }
 
     input, textarea {
+        width: 80%;
+        height: 50px;
+        font-size: 20px;
+        margin: 10px;
+        border-radius: 5px;
+        padding: 2px;
+    }
+
+    #title {
         width: 80%;
         height: 50px;
         font-size: 20px;
