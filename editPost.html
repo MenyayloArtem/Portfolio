@@ -40,7 +40,7 @@
         </div>
         <textarea name="text"
         id="text"
-        :value="post.text"></textarea>
+        :value="post.body"></textarea>
         <button @click='send'>Сохранить</button>
     </form>
     </div>
@@ -54,8 +54,8 @@
                 post : {
                     id : '',
                     title : '',
-                    imgPath : '',
-                    text : ''
+                    avatarSrc : '',
+                    body : ''
                 }
             }
         },
@@ -63,7 +63,7 @@
             async send(){
             let title = document.getElementById('title').value
             let status = document.getElementById('status').value
-            let text = document.getElementById('text').value
+            let body = document.getElementById('text').value
             let postId = window.location.pathname.split(':')[1]
             let post = await fetch(`/editPost:${postId}`,{
                 method : 'POST',
@@ -73,7 +73,7 @@
             body : JSON.stringify({
                 title,
                 status,
-                text
+                body
             })
             })
             document.location.href=`/post:${postId}`

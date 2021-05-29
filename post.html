@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="style.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet" type="text/css">
     <title>Document</title>
 </head>
 <body>
@@ -22,16 +22,22 @@
     <section id="post">
         <div id="post-wrapper">
         <div id="post-content">
-            <h1>{{ post.title }}</h1>
-            <img id="post-img" :src="'uploads/'+post.imgPath" width="400">
-            <div id="post-text" v-html="post.text">{{ post.text }}</div>
+            <div class="row">
+                <h1>{{ post.title }}</h1>
+            <a :href="'/editPost:' + post.id">
+                <img v-if="post.canEdit" src="images/edit.png" width="20" height="20">
+            </a>
+            </div>
+            
+            <img id="post-img" :src="'uploads/'+post.avatarSrc" width="400">
+            <div id="post-text" v-html="post.body"></div>
         </div>
         </div>
     </section>
 </body>
 <style>
     img {
-        max-width: 400px;
+        max-width: 100%;
     }
 </style>
 <script src="https://unpkg.com/vue@next"></script>
@@ -40,9 +46,13 @@
         data(){
             return {
                 post : {
+                    id : 0,
                     title : '',
+                    avatarSrc : '',
                     imgPath : '',
-                    text : ''
+                    body : '',
+                    text : '',
+                    canEdit : false
                 }
             }
         },
@@ -51,6 +61,7 @@
             let post = await fetch(`/getPost:${postId}`)
             let res = await post.json()
             this.post = res
+            console.log(this.post.id)
         }
     }
 

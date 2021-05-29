@@ -13,6 +13,16 @@ const secret = 'secret'
 let session = require('express-session');
 const { decode } = require('punycode');
 
+
+const mimeTypes = {
+    "html" : "text/html",
+    "css" : "text/css",
+    "js" : "text/javascript",
+    "json" : "application/json",
+    "png" : "image/png",
+    "jpg" : "image/jpg"
+}
+
 app.use(session({
     secret,
     cookie: {
@@ -23,13 +33,15 @@ app.use(session({
 
 const data = {
     host: "localhost",
-    user: "testNode",
+    user: "mysql",
     database: "portfolio",
-    password: "12345"
+    password: "mysql"
 }
+
 app.use(multer({dest:"uploads"}).single("filedata"));
 app.use(bodyParser.json())
 app.use(cookieParser())
+app.use(express.static('static'))
 
 app.listen(3000)
   
@@ -67,12 +79,17 @@ app.get('/post:id',(req,res)=>{
 
 app.get('/getPost:id',async (req,res)=>{
     let id = req.params.id.split(':')[1]
-    pool.execute(`SELECT * FROM posts WHERE id = ${id}`)
-    .then(([rows,fields]) => {
-        res.send(rows[0])
-    }).catch(err => {
-        throw err
-    })
+    let post = await pool.execute(`SELECT * FROM posts WHERE id = ${id}`)
+    post = post[0][0]
+    let token = req.cookies['token']
+    post.canEdit = false
+    if(token){
+        let userId = jwt.verify(token.split(' ')[1],secret).id
+        if(userId == post.authorID){
+        post.canEdit = true
+    }
+    }
+    res.json(post)
 })
 
 app.get('/editPost:id',async (req,res)=>{
@@ -100,8 +117,8 @@ app.post('/editPost:id',async (req,res,next)=>{
     `).then(([rows])=>{
         let authorID = rows[0].authorID
         if(authorID == id || permission == 'admin'){
-        return pool.execute('UPDATE posts SET `title` = ?,`text` = ?,`status` = ? WHERE `id` = ?',
-    [req.body.title,req.body.text,req.body.status,postId]
+        return pool.execute('UPDATE posts SET `title` = ?,`body` = ?,`status` = ? WHERE `id` = ?',
+    [req.body.title,req.body.body,req.body.status,postId]
     )
     }
     }).then(()=>{
@@ -114,29 +131,14 @@ app.post('/editPost:id',async (req,res,next)=>{
     next()
 })
 
-app.get('/style.css',(req,res)=>{
-    res.setHeader('Content-Type', 'text/css')
-    res.sendFile(path.join(__dirname,'/style.css'))
-})
-
-app.get('/script.js',(req,res)=>{
-    res.setHeader('Content-Type', 'text/javascript')
-    res.sendFile(path.join(__dirname,'/script.js'))
-})
-
-
-
 app.get('/newPost',
 function(req,res,next){
     let token = req.cookies['token']
     let bearerToken = token.split(' ')[1]
-    console.log(token)
     jwt.verify(bearerToken,secret,(err,{permission})=>{
         if(permission == 'admin'){
-        console.log('Добро пожаловать')
         req.token = bearerToken
     } else {
-        console.log('Вийди звiдси')
         res.redirect('/')
     }
     })
@@ -150,6 +152,15 @@ function(req,res,next){
 
 
 app.get(/./g,(req,res)=>{
+    let type = mimeTypes[req.url.split('.')[req.url.split('.').length - 1]]
+    if(type !== undefined){
+        res.setHeader("Content-Type",type)
+        res.sendFile(path.join(__dirname,req.url))
+    }
+})
+
+app.get(/\.js$/g,(req,res)=>{
+    res.setHeader("Content-Type",'text/javascript')
     res.sendFile(path.join(__dirname,req.url))
 })
 
@@ -175,10 +186,10 @@ app.post('/addPost',(req,res,next)=>{
 })
 
 app.post('/auth', async (req,res)=>{
-    pool.execute(`SELECT name FROM users WHERE name = '${req.body.name}'`)
+    pool.execute(`SELECT nickname FROM users WHERE nickname = '${req.body.name}'`)
     .then(([rows,fields])=>{
         if(rows.length){
-            return pool.execute(`SELECT * FROM users WHERE name = '${req.body.name}'`)
+            return pool.execute(`SELECT * FROM users WHERE nickname = '${req.body.name}'`)
         } else {
             res.json({
                 message : 'Имени не существует',
@@ -191,7 +202,7 @@ app.post('/auth', async (req,res)=>{
         if(compare){
             let token = jwt.sign({
             id : rows[0].id,
-            name : rows[0].name,
+            name : rows[0].nickname,
             permission : rows[0].permission
             },secret)
                 res.cookie('token','Bearer ' + token)

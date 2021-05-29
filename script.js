@@ -6,19 +6,11 @@ const App = {
             posts : [],
             info : {
                 adress : 'Ukraine,Donetckaya oblast,Torez',
-                telephone : '+380710000000 +88005553535',
+                telephone : '+380710000000 \n +88005553535',
                 email : 'menyaylo-artem@mail.ru qasdftg79@gmail.com'
             }
         }
     
-    },
-    methods : {
-    getCookie(name) {
-        let matches = document.cookie.match(new RegExp(
-        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
-        ));
-        return matches ? decodeURIComponent(matches[1]) : undefined;
-    }
     },
     computed : {
         postsSeen(){
